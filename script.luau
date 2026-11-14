@@ -1,7 +1,7 @@
 --[[
-    ⚔️ KRONOS HUB - MOBILE ESP EDITION ⚔️
+    ⚔️ KRONOS HUB - MOBILE ESP EDITION + INTRO ANIMATION ⚔️
     Local: StarterPlayer > StarterPlayerScripts (LocalScript)
-    Ou execute via executor mobile (Delta, Fluxus, Codex, Hydrogen, etc.)
+    Ou execute via executor mobile (Delta, Fluxus, Codex, Hydrogen, Arceus X, etc.)
 ]]
 
 --=============================================================
@@ -17,26 +17,21 @@ local Workspace = game:GetService("Workspace")
 local player = Players.LocalPlayer
 local camera = Workspace.CurrentCamera
 
---=============================================================
--- REMOVE HUB ANTIGO
---=============================================================
+local DRAWING_OK = pcall(function() return Drawing.new("Text") end)
+if not DRAWING_OK then
+    warn("⚠️ Kronos Hub: seu executor NÃO suporta Drawing. O ESP não vai funcionar.")
+end
+
 if CoreGui:FindFirstChild("KronosHub") then
     CoreGui.KronosHub:Destroy()
 end
 
 --=============================================================
--- ESTADO GLOBAL
+-- ESTADO
 --=============================================================
-local godMode = false
-local noclip = false
-local flyEnabled = false
-local infiniteJumpEnabled = false
-local speedHackEnabled = false
-local clickTPEnabled = false
+local godMode, noclip, flyEnabled, infiniteJumpEnabled, speedHackEnabled, clickTPEnabled = false, false, false, false, false, false
 local connections = {}
-local flyConnection = nil
-local flySpeed = 50
-local speedValue = 16
+local flyConnection, flySpeed, speedValue = nil, 50, 16
 
 --=============================================================
 -- GUI PRINCIPAL
@@ -129,7 +124,7 @@ CloseBtn.Parent = TopBar
 Instance.new("UICorner", CloseBtn).CornerRadius = UDim.new(0, 6)
 
 --=============================================================
--- CONTENT (scroll para mobile)
+-- CONTENT
 --=============================================================
 local Content = Instance.new("ScrollingFrame")
 Content.Name = "Content"
@@ -152,7 +147,7 @@ ContentLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
 end)
 
 --=============================================================
--- FUNÇÃO CRIAR TOGGLE
+-- TOGGLE
 --=============================================================
 local function criarToggle(nome, ordem, callback)
     local btn = Instance.new("TextButton")
@@ -167,7 +162,6 @@ local function criarToggle(nome, ordem, callback)
     btn.AutoButtonColor = false
     btn.LayoutOrder = ordem
     btn.Parent = Content
-
     Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 8)
 
     local stroke = Instance.new("UIStroke")
@@ -193,7 +187,7 @@ local function criarToggle(nome, ordem, callback)
 end
 
 --=============================================================
--- GOD MODE
+-- GOD MODE / NOCLIP
 --=============================================================
 local function setGodMode(ativo)
     godMode = ativo
@@ -204,37 +198,32 @@ local function setGodMode(ativo)
     if ativo then
         hum.MaxHealth = math.huge
         hum.Health = math.huge
-        local conn = hum.HealthChanged:Connect(function()
+        table.insert(connections, hum.HealthChanged:Connect(function()
             if godMode then hum.Health = hum.MaxHealth end
-        end)
-        table.insert(connections, conn)
+        end))
     else
         hum.MaxHealth = 100
         hum.Health = 100
     end
 end
 
---=============================================================
--- NOCLIP
---=============================================================
 local function setNoclip(ativo)
     noclip = ativo
     if ativo then
-        local conn = RunService.Stepped:Connect(function()
+        table.insert(connections, RunService.Stepped:Connect(function()
             if not noclip then return end
             local char = player.Character
             if char then
-                for _, parte in ipairs(char:GetDescendants()) do
-                    if parte:IsA("BasePart") then parte.CanCollide = false end
+                for _, p in ipairs(char:GetDescendants()) do
+                    if p:IsA("BasePart") then p.CanCollide = false end
                 end
             end
-        end)
-        table.insert(connections, conn)
+        end))
     end
 end
 
 --=============================================================
--- FLY (VOAR) - compatível com mobile
+-- FLY
 --=============================================================
 local function toggleFly(ativo)
     flyEnabled = ativo
@@ -242,33 +231,26 @@ local function toggleFly(ativo)
     if not char then return end
     local hrp = char:FindFirstChild("HumanoidRootPart")
     if not hrp then return end
-
     if flyEnabled then
         local bv = Instance.new("BodyVelocity")
         bv.Velocity = Vector3.zero
         bv.MaxForce = Vector3.new(9e9, 9e9, 9e9)
         bv.Parent = hrp
-
         local bg = Instance.new("BodyGyro")
         bg.MaxTorque = Vector3.new(9e9, 9e9, 9e9)
         bg.P = 1000
         bg.D = 50
         bg.Parent = hrp
-
         flyConnection = RunService.RenderStepped:Connect(function()
             if not flyEnabled then return end
-            local moveDir = Vector3.zero
-            if UserInputService:IsKeyDown(Enum.KeyCode.W) then moveDir += camera.CFrame.LookVector end
-            if UserInputService:IsKeyDown(Enum.KeyCode.S) then moveDir -= camera.CFrame.LookVector end
-            if UserInputService:IsKeyDown(Enum.KeyCode.A) then moveDir -= camera.CFrame.RightVector end
-            if UserInputService:IsKeyDown(Enum.KeyCode.D) then moveDir += camera.CFrame.RightVector end
-            if UserInputService:IsKeyDown(Enum.KeyCode.Space) then moveDir += Vector3.new(0, 1, 0) end
-            if UserInputService:IsKeyDown(Enum.KeyCode.LeftShift) then moveDir -= Vector3.new(0, 1, 0) end
-            if moveDir.Magnitude > 0 then
-                bv.Velocity = moveDir.Unit * flySpeed
-            else
-                bv.Velocity = Vector3.zero
-            end
+            local dir = Vector3.zero
+            if UserInputService:IsKeyDown(Enum.KeyCode.W) then dir += camera.CFrame.LookVector end
+            if UserInputService:IsKeyDown(Enum.KeyCode.S) then dir -= camera.CFrame.LookVector end
+            if UserInputService:IsKeyDown(Enum.KeyCode.A) then dir -= camera.CFrame.RightVector end
+            if UserInputService:IsKeyDown(Enum.KeyCode.D) then dir += camera.CFrame.RightVector end
+            if UserInputService:IsKeyDown(Enum.KeyCode.Space) then dir += Vector3.new(0, 1, 0) end
+            if UserInputService:IsKeyDown(Enum.KeyCode.LeftShift) then dir -= Vector3.new(0, 1, 0) end
+            bv.Velocity = dir.Magnitude > 0 and dir.Unit * flySpeed or Vector3.zero
             bg.CFrame = camera.CFrame
         end)
     else
@@ -280,26 +262,22 @@ local function toggleFly(ativo)
 end
 
 --=============================================================
--- INFINITE JUMP
+-- INFINITE JUMP / SPEED / CLICK TP
 --=============================================================
 local function toggleInfiniteJump(ativo)
     infiniteJumpEnabled = ativo
     if ativo then
-        local conn = UserInputService.JumpRequest:Connect(function()
+        table.insert(connections, UserInputService.JumpRequest:Connect(function()
             if not infiniteJumpEnabled then return end
             local char = player.Character
             if char then
                 local hum = char:FindFirstChildOfClass("Humanoid")
                 if hum then hum:ChangeState(Enum.HumanoidStateType.Jumping) end
             end
-        end)
-        table.insert(connections, conn)
+        end))
     end
 end
 
---=============================================================
--- SPEED HACK
---=============================================================
 local function toggleSpeedHack(ativo)
     speedHackEnabled = ativo
     local char = player.Character
@@ -308,220 +286,147 @@ local function toggleSpeedHack(ativo)
     if not hum then return end
     if ativo then
         hum.WalkSpeed = speedValue
-        local conn = RunService.Stepped:Connect(function()
-            if speedHackEnabled and hum.Parent then
-                hum.WalkSpeed = speedValue
-            end
-        end)
-        table.insert(connections, conn)
+        table.insert(connections, RunService.Stepped:Connect(function()
+            if speedHackEnabled and hum.Parent then hum.WalkSpeed = speedValue end
+        end))
     else
         hum.WalkSpeed = 16
     end
 end
 
---=============================================================
--- CLICK TELEPORT (mobile: toque na tela)
---=============================================================
 local function toggleClickTP(ativo)
     clickTPEnabled = ativo
     if ativo then
-        local conn = UserInputService.TouchTapInWorld:Connect(function(pos, processed)
+        table.insert(connections, UserInputService.TouchTapInWorld:Connect(function(pos, processed)
             if processed or not clickTPEnabled then return end
             local char = player.Character
             local hrp = char and char:FindFirstChild("HumanoidRootPart")
-            if hrp then
-                hrp.CFrame = CFrame.new(pos + Vector3.new(0, 3, 0))
-            end
-        end)
-        table.insert(connections, conn)
+            if hrp then hrp.CFrame = CFrame.new(pos + Vector3.new(0, 3, 0)) end
+        end))
     end
 end
 
 --=============================================================
--- 📱 ESP MOBILE AVANÇADO
--- Mostra: Nome, Time, Vida (barra), Vida numérica, Distância
+-- ESP MOBILE
 --=============================================================
-local ESP = {
-    enabled = false,
-    drawings = {},      -- [Player] = { objetos }
-    connections = {},
-    updateConn = nil,
-}
+local ESP = { enabled = false, drawings = {}, connections = {}, updateConn = nil }
 
--- Cria um objeto Drawing com proteção
 local function newDraw(class, props)
+    if not DRAWING_OK then return nil end
     local ok, obj = pcall(function() return Drawing.new(class) end)
     if not ok or not obj then return nil end
-    for k, v in pairs(props) do
-        pcall(function() obj[k] = v end)
-    end
+    for k, v in pairs(props) do pcall(function() obj[k] = v end) end
     obj.Visible = false
     return obj
 end
 
--- Configura ESP para um jogador
 local function setupESP(plr)
-    if plr == player then return end
-    if ESP.drawings[plr] then return end
-
+    if plr == player or ESP.drawings[plr] or not DRAWING_OK then return end
     local d = {}
-    -- Nome
-    d.name = newDraw("Text", {
-        Center = true, Size = 16, Color = Color3.fromRGB(255, 255, 255),
-        Outline = true, OutlineColor = Color3.fromRGB(0, 0, 0), Font = 2,
-    })
-    -- Time
-    d.team = newDraw("Text", {
-        Center = true, Size = 13, Color = Color3.fromRGB(200, 200, 255),
-        Outline = true, OutlineColor = Color3.fromRGB(0, 0, 0), Font = 2,
-    })
-    -- Fundo da barra de vida
-    d.healthBg = newDraw("Square", {
-        Color = Color3.fromRGB(0, 0, 0), Filled = true, Thickness = 0,
-    })
-    -- Barra de vida
-    d.healthBar = newDraw("Square", {
-        Color = Color3.fromRGB(0, 255, 0), Filled = true, Thickness = 0,
-    })
-    -- Texto da vida
-    d.healthText = newDraw("Text", {
-        Center = true, Size = 11, Color = Color3.fromRGB(255, 255, 255),
-        Outline = true, OutlineColor = Color3.fromRGB(0, 0, 0), Font = 2,
-    })
-    -- Distância
-    d.distance = newDraw("Text", {
-        Center = true, Size = 12, Color = Color3.fromRGB(255, 200, 100),
-        Outline = true, OutlineColor = Color3.fromRGB(0, 0, 0), Font = 2,
-    })
-
+    d.name = newDraw("Text", {Center = true, Size = 16, Color = Color3.new(1,1,1), Outline = true, OutlineColor = Color3.new(0,0,0), Font = 2})
+    d.team = newDraw("Text", {Center = true, Size = 13, Color = Color3.fromRGB(200, 200, 255), Outline = true, OutlineColor = Color3.new(0,0,0), Font = 2})
+    d.healthBg = newDraw("Square", {Color = Color3.new(0,0,0), Filled = true, Thickness = 0})
+    d.healthBar = newDraw("Square", {Color = Color3.fromRGB(0,255,0), Filled = true, Thickness = 0})
+    d.healthText = newDraw("Text", {Center = true, Size = 11, Color = Color3.new(1,1,1), Outline = true, OutlineColor = Color3.new(0,0,0), Font = 2})
+    d.distance = newDraw("Text", {Center = true, Size = 12, Color = Color3.fromRGB(255, 200, 100), Outline = true, OutlineColor = Color3.new(0,0,0), Font = 2})
     ESP.drawings[plr] = d
 end
 
--- Remove ESP de um jogador
 local function removeESP(plr)
     if ESP.drawings[plr] then
         for _, obj in pairs(ESP.drawings[plr]) do
-            pcall(function() obj:Remove() end)
+            if obj then pcall(function() obj:Remove() end) end
         end
         ESP.drawings[plr] = nil
     end
 end
 
--- Esconde todos os desenhos de um jogador
 local function hideDrawings(d)
     for _, obj in pairs(d) do
-        pcall(function() obj.Visible = false end)
+        if obj then pcall(function() obj.Visible = false end) end
     end
 end
 
--- Loop de atualização (Roda a cada frame)
 local function updateESP()
     local myChar = player.Character
     local myHRP = myChar and myChar:FindFirstChild("HumanoidRootPart")
     local myPos = myHRP and myHRP.Position
+    if not myPos then return end
 
     for plr, d in pairs(ESP.drawings) do
         local char = plr.Character
         local hum = char and char:FindFirstChildOfClass("Humanoid")
         local hrp = char and char:FindFirstChild("HumanoidRootPart")
+        if not hum or not hrp or hum.Health <= 0 then hideDrawings(d) continue end
 
-        -- Se não tem personagem vivo, esconde tudo
-        if not hum or not hrp or hum.Health <= 0 or not myPos then
-            hideDrawings(d)
-            continue
+        local screenPos, onScreen = camera:WorldToViewportPoint(hrp.Position + Vector3.new(0, 3, 0))
+        if not onScreen then hideDrawings(d) continue end
+
+        if d.name then
+            local nameText = plr.DisplayName
+            if plr.DisplayName ~= plr.Name then nameText = plr.DisplayName .. " (@" .. plr.Name .. ")" end
+            d.name.Text = nameText
+            d.name.Position = Vector2.new(screenPos.X, screenPos.Y - 55)
+            d.name.Visible = true
+        end
+        if d.team then
+            if plr.Team then
+                d.team.Text = "[" .. plr.Team.Name .. "]"
+                d.team.Color = plr.Team.TeamColor.Color
+                d.team.Position = Vector2.new(screenPos.X, screenPos.Y - 38)
+                d.team.Visible = true
+            else
+                d.team.Visible = false
+            end
         end
 
-        -- Projeta posição 3D para 2D na tela
-        local screenPos, onScreen = camera:WorldToViewportPoint(
-            hrp.Position + Vector3.new(0, 3, 0)
-        )
-
-        if not onScreen then
-            hideDrawings(d)
-            continue
-        end
-
-        -- === NOME ===
-        local nameText = plr.DisplayName
-        if plr.DisplayName ~= plr.Name then
-            nameText = plr.DisplayName .. " (@" .. plr.Name .. ")"
-        end
-        d.name.Text = nameText
-        d.name.Position = Vector2.new(screenPos.X, screenPos.Y - 55)
-        d.name.Visible = true
-
-        -- === TIME ===
-        if plr.Team then
-            d.team.Text = "[" .. plr.Team.Name .. "]"
-            d.team.Color = plr.Team.TeamColor.Color
-        else
-            d.team.Text = ""
-        end
-        d.team.Position = Vector2.new(screenPos.X, screenPos.Y - 38)
-        d.team.Visible = (plr.Team ~= nil)
-
-        -- === BARRA DE VIDA ===
-        local healthPct = math.clamp(hum.Health / math.max(hum.MaxHealth, 1), 0, 1)
+        local hp = math.clamp(hum.Health / math.max(hum.MaxHealth, 1), 0, 1)
         local barW, barH = 80, 7
         local barX = screenPos.X - barW / 2
         local barY = screenPos.Y - 22
-
-        d.healthBg.Size = Vector2.new(barW, barH)
-        d.healthBg.Position = Vector2.new(barX, barY)
-        d.healthBg.Visible = true
-
-        d.healthBar.Size = Vector2.new(barW * healthPct, barH)
-        d.healthBar.Position = Vector2.new(barX, barY)
-        -- Cor: vermelho (0% vida) → verde (100% vida)
-        d.healthBar.Color = Color3.fromRGB(
-            math.floor(255 * (1 - healthPct)),
-            math.floor(255 * healthPct),
-            0
-        )
-        d.healthBar.Visible = true
-
-        -- === VIDA NUMÉRICA ===
-        d.healthText.Text = math.floor(hum.Health) .. " / " .. math.floor(hum.MaxHealth)
-        d.healthText.Position = Vector2.new(screenPos.X, barY + barH + 8)
-        d.healthText.Visible = true
-
-        -- === DISTÂNCIA ===
-        local dist = (hrp.Position - myPos).Magnitude
-        d.distance.Text = "📏 " .. math.floor(dist) .. " studs"
-        d.distance.Position = Vector2.new(screenPos.X, barY + barH + 22)
-        d.distance.Visible = true
+        if d.healthBg then
+            d.healthBg.Size = Vector2.new(barW, barH)
+            d.healthBg.Position = Vector2.new(barX, barY)
+            d.healthBg.Visible = true
+        end
+        if d.healthBar then
+            d.healthBar.Size = Vector2.new(barW * hp, barH)
+            d.healthBar.Position = Vector2.new(barX, barY)
+            d.healthBar.Color = Color3.fromRGB(math.floor(255*(1-hp)), math.floor(255*hp), 0)
+            d.healthBar.Visible = true
+        end
+        if d.healthText then
+            d.healthText.Text = math.floor(hum.Health) .. " / " .. math.floor(hum.MaxHealth)
+            d.healthText.Position = Vector2.new(screenPos.X, barY + barH + 8)
+            d.healthText.Visible = true
+        end
+        if d.distance then
+            local dist = (hrp.Position - myPos).Magnitude
+            d.distance.Text = "📏 " .. math.floor(dist) .. " studs"
+            d.distance.Position = Vector2.new(screenPos.X, barY + barH + 22)
+            d.distance.Visible = true
+        end
     end
 end
 
--- Liga/Desliga ESP
 local function toggleESP(ativo)
     ESP.enabled = ativo
-
     if ativo then
-        -- Configura todos os jogadores existentes
-        for _, p in ipairs(Players:GetPlayers()) do
-            setupESP(p)
-        end
-        -- Observa jogadores novos
-        local conn1 = Players.PlayerAdded:Connect(setupESP)
-        local conn2 = Players.PlayerRemoving:Connect(removeESP)
-        table.insert(ESP.connections, conn1)
-        table.insert(ESP.connections, conn2)
-
-        -- Loop de atualização
+        if not DRAWING_OK then warn("⚠️ ESP: Drawing não suportado.") return end
+        for _, p in ipairs(Players:GetPlayers()) do setupESP(p) end
+        table.insert(ESP.connections, Players.PlayerAdded:Connect(setupESP))
+        table.insert(ESP.connections, Players.PlayerRemoving:Connect(removeESP))
         ESP.updateConn = RunService.RenderStepped:Connect(updateESP)
     else
-        -- Para o loop
         if ESP.updateConn then ESP.updateConn:Disconnect() end
         for _, c in ipairs(ESP.connections) do c:Disconnect() end
         ESP.connections = {}
-        -- Remove todos os desenhos
         for plr in pairs(ESP.drawings) do removeESP(plr) end
     end
 end
 
 --=============================================================
--- CRIAÇÃO DOS BOTÕES
+-- BOTÕES
 --=============================================================
 criarToggle("🛡️ God Mode", 1, setGodMode)
 criarToggle("👻 Noclip", 2, setNoclip)
@@ -532,95 +437,158 @@ criarToggle("🖱️ Click TP (toque)", 6, toggleClickTP)
 criarToggle("📱 ESP Mobile (Info)", 7, toggleESP)
 
 --=============================================================
--- RESPAWN: mantém funções ativas
+-- RESPAWN
 --=============================================================
 player.CharacterAdded:Connect(function(char)
     task.wait(0.5)
     local hum = char:FindFirstChildOfClass("Humanoid")
     if not hum then return end
-    if godMode then
-        hum.MaxHealth = math.huge
-        hum.Health = math.huge
-    end
-    if speedHackEnabled then
-        hum.WalkSpeed = speedValue
-    end
+    if godMode then hum.MaxHealth = math.huge hum.Health = math.huge end
+    if speedHackEnabled then hum.WalkSpeed = speedValue end
 end)
 
 --=============================================================
--- DRAG (arrastar pelo topbar — funciona com toque)
+-- DRAG
 --=============================================================
-local dragging = false
-local dragStart, startPos
-
+local dragging, dragStart, startPos = false, nil, nil
 TopBar.InputBegan:Connect(function(input)
     if input.UserInputType == Enum.UserInputType.MouseButton1
         or input.UserInputType == Enum.UserInputType.Touch then
         dragging = true
         dragStart = input.Position
         startPos = Main.Position
-
         input.Changed:Connect(function()
-            if input.UserInputState == Enum.UserInputState.End then
-                dragging = false
-            end
+            if input.UserInputState == Enum.UserInputState.End then dragging = false end
         end)
     end
 end)
-
 UserInputService.InputChanged:Connect(function(input)
     if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement
         or input.UserInputType == Enum.UserInputType.Touch) then
         local delta = input.Position - dragStart
-        Main.Position = UDim2.new(
-            startPos.X.Scale, startPos.X.Offset + delta.X,
-            startPos.Y.Scale, startPos.Y.Offset + delta.Y
-        )
+        Main.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
     end
 end)
 
 --=============================================================
 -- MINIMIZAR
 --=============================================================
-local minimizado = false
-local tamanhoOriginal = Main.Size
-
+local minimizado, tamanhoOriginal = false, Main.Size
 MinimizeBtn.MouseButton1Click:Connect(function()
     minimizado = not minimizado
     if minimizado then
-        TweenService:Create(Main, TweenInfo.new(0.25, Enum.EasingStyle.Quad), {
-            Size = UDim2.new(0, 320, 0, 40)
-        }):Play()
+        TweenService:Create(Main, TweenInfo.new(0.25, Enum.EasingStyle.Quad), {Size = UDim2.new(0, 320, 0, 40)}):Play()
         Content.Visible = false
         MinimizeBtn.Text = "+"
     else
-        TweenService:Create(Main, TweenInfo.new(0.25, Enum.EasingStyle.Quad), {
-            Size = tamanhoOriginal
-        }):Play()
+        TweenService:Create(Main, TweenInfo.new(0.25, Enum.EasingStyle.Quad), {Size = tamanhoOriginal}):Play()
         Content.Visible = true
         MinimizeBtn.Text = "–"
     end
 end)
 
 --=============================================================
--- FECHAR (limpa tudo)
+-- FECHAR
 --=============================================================
 CloseBtn.MouseButton1Click:Connect(function()
-    for _, c in ipairs(connections) do
-        pcall(function() c:Disconnect() end)
-    end
-    -- Desliga ESP
+    for _, c in ipairs(connections) do pcall(function() c:Disconnect() end) end
     if ESP.enabled then toggleESP(false) end
-
-    godMode = false
-    noclip = false
-    flyEnabled = false
-    infiniteJumpEnabled = false
-    speedHackEnabled = false
-    clickTPEnabled = false
-
+    godMode, noclip, flyEnabled, infiniteJumpEnabled, speedHackEnabled, clickTPEnabled = false, false, false, false, false, false
     ScreenGui:Destroy()
 end)
 
+--=============================================================
+-- 🎬 ANIMAÇÃO DE INÍCIO (INTRO ANIMATION)
+--=============================================================
+local function playIntro()
+    -- Pop-in com UIScale (efeito "Back" = cresce passando do tamanho e volta)
+    local mainScale = Instance.new("UIScale")
+    mainScale.Name = "MainScale"
+    mainScale.Scale = 0.55
+    mainScale.Parent = Main
+
+    -- Configura estado inicial
+    MainStroke.Thickness = 8
+    MainStroke.Transparency = 1
+    Title.Text = ""
+
+    -- Prepara botões para cascata
+    local buttons = {}
+    for _, child in ipairs(Content:GetChildren()) do
+        if child:IsA("TextButton") then
+            local bs = Instance.new("UIScale")
+            bs.Name = "IntroScale"
+            bs.Scale = 0
+            bs.Parent = child
+            table.insert(buttons, child)
+        end
+    end
+
+    -- 1. FLASH INICIAL (branco/roxo piscando)
+    local Flash = Instance.new("Frame")
+    Flash.Size = UDim2.new(1, 0, 1, 0)
+    Flash.BackgroundColor3 = Color3.fromRGB(140, 80, 255)
+    Flash.BackgroundTransparency = 0.6
+    Flash.BorderSizePixel = 0
+    Flash.ZIndex = 999
+    Flash.Active = false
+    Flash.Parent = ScreenGui
+    TweenService:Create(Flash, TweenInfo.new(0.6, Enum.EasingStyle.Quad), {
+        BackgroundTransparency = 1
+    }):Play()
+    task.delay(0.7, function() Flash:Destroy() end)
+
+    -- 2. POP-IN do menu (cresce com overshoot)
+    TweenService:Create(mainScale, TweenInfo.new(0.7, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
+        Scale = 1
+    }):Play()
+
+    -- 3. PULSE da borda (glow)
+    task.delay(0.15, function()
+        TweenService:Create(MainStroke, TweenInfo.new(0.8, Enum.EasingStyle.Quad), {
+            Thickness = 2,
+            Transparency = 0
+        }):Play()
+    end)
+
+    -- 4. GIRO do gradiente (brilho passando pela borda)
+    task.spawn(function()
+        local t = TweenService:Create(MainGradient, TweenInfo.new(1.2, Enum.EasingStyle.Quad), {
+            Rotation = 45 + 360
+        })
+        t:Play()
+    end)
+
+    -- 5. TYPEWRITER no título
+    task.delay(0.45, function()
+        local fullText = "⚔️ KRONOS HUB"
+        local len = utf8.len(fullText) or #fullText
+        for i = 1, len do
+            local pos = utf8.offset(fullText, i + 1) or (#fullText + 1)
+            Title.Text = string.sub(fullText, 1, pos - 1)
+            task.wait(0.03)
+        end
+    end)
+
+    -- 6. CASCATA dos botões (um por um com pop)
+    for i, btn in ipairs(buttons) do
+        local bs = btn:FindFirstChild("IntroScale")
+        if bs then
+            task.delay(0.35 + (i - 1) * 0.06, function()
+                TweenService:Create(bs, TweenInfo.new(0.4, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
+                    Scale = 1
+                }):Play()
+            end)
+        end
+    end
+end
+
+-- Inicia a animação
+playIntro()
+
+--=============================================================
+-- FIM DO SCRIPT
+--=============================================================
 print("⚔️ Kronos Hub Mobile Edition carregado com sucesso!")
-print("📱 ESP mostra: Nome, Time, Vida, Distância")
+print("📱 ESP: Nome, Time, Vida, Distância")
+print("🎬 Animação de início executada")
