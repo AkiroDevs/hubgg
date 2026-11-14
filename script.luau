@@ -1,342 +1,284 @@
--- KRONOS HUB MOBILE ULTIMATE - CORRIGIDO E OTIMIZADO
--- Autor: Uncensored AI Chat (Baseado no hubgg)
+-- ⚔️ KRONOS HUB (Delta Mobile Fixed) ⚔️
+-- Cole diretamente no Delta Executor móvel
+
+-- ========== 1. Esperar o jogo carregar (essencial para Delta) ==========
+if not game:IsLoaded() then game.Loaded:Wait() end
+task.wait(0.5)
 
 local Players = game:GetService("Players")
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local RunService = game:GetService("RunService") -- CORREÇÃO 1: Chave adicionada
 local UserInputService = game:GetService("UserInputService")
+local RunService = game:GetService("RunService")
 local TweenService = game:GetService("TweenService")
-local Workspace = game:GetService("Workspace")
 
-local LocalPlayer = Players.LocalPlayer
-local Character = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
-local Humanoid = Character:WaitForChild("Humanoid")
-local RootPart = Character:WaitForChild("HumanoidRootPart") -- CORREÇÃO 2: Chave adicionada
+local player = Players.LocalPlayer
 
--- ==========================================
--- 1. CONFIGURAÇÕES GERAIS
--- ==========================================
-local Settings = {
-    GodMode = true,
-    SpeedHack = false,
-    SpeedValue = 35,
-    AutoJump = true,
-    AutoFarm = true,
-    MinimizeUI = true
-}
-
--- Variável para rastrear o personagem atual (para lidar com respawn)
-local CurrentCharacter = Character
-
-local function updateCharacterVars()
-    CurrentCharacter = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
-    Humanoid = CurrentCharacter:WaitForChild("Humanoid")
-    RootPart = CurrentCharacter:WaitForChild("HumanoidRootPart")
-end
-
-LocalPlayer.CharacterAdded:Connect(updateCharacterVars)
-
--- ==========================================
--- 2. GOD MODE & DANO
--- ==========================================
-local function setupGodMode()
-    local damageEvents = {"Damage", "TakeDamage", "Hurt"}
-    for _, name in ipairs(damageEvents) do
-        local evt = ReplicatedStorage:FindFirstChild(name)
-        if evt and evt:IsA("RemoteEvent") then
-            evt.OnClientEvent:Connect(function()
-                task.wait(0.05)
-                if Humanoid.Health < Humanoid.MaxHealth then
-                    Humanoid.Health = Humanoid.MaxHealth
-                end
-            end)
+-- ========== 2. Seleção segura do parent da GUI (compatível com Delta móvel) ==========
+local guiParent
+do
+    local ok, result = pcall(function() return gethui() end)
+    if ok and result then
+        guiParent = result
+    else
+        local ok2, result2 = pcall(function()
+            return game:GetService("CoreGui")
+        end)
+        if ok2 and result2 then
+            guiParent = result2
+        else
+            guiParent = player:WaitForChild("PlayerGui", 10) or player.PlayerGui
         end
     end
-    
-    Humanoid.HealthChanged:Connect(function()
-        if Humanoid.Health > 0 and Humanoid.Health < Humanoid.MaxHealth * 0.9 then
-            Humanoid.Health = Humanoid.MaxHealth
-        end
-    end)
-    
-    print("[Kronos] God Mode: ATIVO")
 end
 
--- ==========================================
--- 3. SPEED HACK & MOVIMENTO
--- ==========================================
-local function setupMovement()
-    RunService.RenderStepped:Connect(function()
-        if Settings.SpeedHack then
-            Humanoid.WalkSpeed = Settings.SpeedValue
-        else
-            Humanoid.WalkSpeed = 16
-        end
-        
-        if Settings.AutoJump and not Humanoid.IsJumping then
-            if Humanoid.FloorMaterial ~= Enum.Material.Air then
-                if math.random(1, 100) < 5 then 
-                    Humanoid.Jump = true
-                end
-            end
-        end
-        
-        -- Empurrão suave
-        if not Humanoid.MoveDirection.Magnitude > 0.1 and Humanoid.FloorMaterial ~= Enum.Material.Air then
-            local cam = workspace.CurrentCamera
-            local dir = cam.CFrame.LookVector
-            RootPart.Velocity = Vector3.new(dir.X * 18, RootPart.Velocity.Y, dir.Z * 18)
-        end
-    end)
+-- Limpar GUI antiga
+for _, child in ipairs(guiParent:GetChildren()) do
+    if child.Name == "KronosHub" then child:Destroy() end
+end
+pcall(function()
+    for _, child in ipairs(player.PlayerGui:GetChildren()) do
+        if child.Name == "KronosHub" then child:Destroy() end
+    end
+end)
+
+-- ========== 3. GUI principal ==========
+local ScreenGui = Instance.new("ScreenGui")
+ScreenGui.Name = "KronosHub"
+ScreenGui.ResetOnSpawn = false
+ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+ScreenGui.IgnoreGuiInset = true
+ScreenGui.Parent = guiParent
+
+local Main = Instance.new("Frame")
+Main.Name = "Main"
+Main.Size = UDim2.new(0, 320, 0, 260)
+Main.Position = UDim2.new(0.5, -160, 0.5, -130)
+Main.BackgroundColor3 = Color3.fromRGB(20, 20, 28)
+Main.BorderSizePixel = 0
+Main.Active = true
+Main.Parent = ScreenGui
+
+local MainCorner = Instance.new("UICorner")
+MainCorner.CornerRadius = UDim.new(0, 10)
+MainCorner.Parent = Main
+
+local MainStroke = Instance.new("UIStroke")
+MainStroke.Color = Color3.fromRGB(140, 80, 255)
+MainStroke.Thickness = 2
+MainStroke.Parent = Main
+
+-- Barra de título
+local TopBar = Instance.new("Frame")
+TopBar.Name = "TopBar"
+TopBar.Size = UDim2.new(1, 0, 0, 40)
+TopBar.BackgroundColor3 = Color3.fromRGB(30, 30, 42)
+TopBar.BorderSizePixel = 0
+TopBar.Parent = Main
+
+local TopBarCorner = Instance.new("UICorner")
+TopBarCorner.CornerRadius = UDim.new(0, 10)
+TopBarCorner.Parent = TopBar
+
+local TopBarCover = Instance.new("Frame")
+TopBarCover.Size = UDim2.new(1, 0, 0, 10)
+TopBarCover.Position = UDim2.new(0, 0, 1, -10)
+TopBarCover.BackgroundColor3 = Color3.fromRGB(30, 30, 42)
+TopBarCover.BorderSizePixel = 0
+TopBarCover.Parent = TopBar
+
+local Title = Instance.new("TextLabel")
+Title.Size = UDim2.new(1, -90, 1, 0)
+Title.Position = UDim2.new(0, 12, 0, 0)
+Title.BackgroundTransparency = 1
+Title.Text = "⚔️ KRONOS HUB"
+Title.TextColor3 = Color3.fromRGB(220, 200, 255)
+Title.Font = Enum.Font.GothamBold
+Title.TextSize = 18
+Title.TextXAlignment = Enum.TextXAlignment.Left
+Title.Parent = TopBar
+
+local MinimizeBtn = Instance.new("TextButton")
+MinimizeBtn.Size = UDim2.new(0, 30, 0, 30)
+MinimizeBtn.Position = UDim2.new(1, -70, 0, 5)
+MinimizeBtn.BackgroundColor3 = Color3.fromRGB(60, 60, 80)
+MinimizeBtn.Text = "–"
+MinimizeBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+MinimizeBtn.Font = Enum.Font.GothamBold
+MinimizeBtn.TextSize = 18
+MinimizeBtn.Parent = TopBar
+
+local MinCorner = Instance.new("UICorner")
+MinCorner.CornerRadius = UDim.new(0, 6)
+MinCorner.Parent = MinimizeBtn
+
+local CloseBtn = Instance.new("TextButton")
+CloseBtn.Size = UDim2.new(0, 30, 0, 30)
+CloseBtn.Position = UDim2.new(1, -35, 0, 5)
+CloseBtn.BackgroundColor3 = Color3.fromRGB(200, 50, 70)
+CloseBtn.Text = "✕"
+CloseBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+CloseBtn.Font = Enum.Font.GothamBold
+CloseBtn.TextSize = 16
+CloseBtn.Parent = TopBar
+
+local CloseCorner = Instance.new("UICorner")
+CloseCorner.CornerRadius = UDim.new(0, 6)
+CloseCorner.Parent = CloseBtn
+
+-- Container de conteúdo
+local Content = Instance.new("Frame")
+Content.Size = UDim2.new(1, -20, 1, -55)
+Content.Position = UDim2.new(0, 10, 0, 48)
+Content.BackgroundTransparency = 1
+Content.Parent = Main
+
+local ContentLayout = Instance.new("UIListLayout")
+ContentLayout.Padding = UDim.new(0, 8)
+ContentLayout.SortOrder = Enum.SortOrder.LayoutOrder
+ContentLayout.Parent = Content
+
+-- ========== 4. Lógica funcional ==========
+local godMode, noclip = false, false
+local connections = {}
+
+local function setGodMode(ativo)
+    godMode = ativo
+    local char = player.Character
+    if not char then return end
+    local hum = char:FindFirstChildOfClass("Humanoid")
+    if not hum then return end
+    if ativo then
+        hum.MaxHealth = math.huge
+        hum.Health = math.huge
+        local conn = hum.HealthChanged:Connect(function()
+            if godMode then hum.Health = hum.MaxHealth end
+        end)
+        table.insert(connections, conn)
+    else
+        hum.MaxHealth = 100
+        hum.Health = 100
+    end
 end
 
--- ==========================================
--- 4. AUTO FARM OTIMIZADO
--- ==========================================
-local function setupAutoFarm()
-    while task.wait(0.5) do
-        if Settings.AutoFarm then
-            -- Verifica apenas itens próximos para economizar processamento
-            local items = Workspace:GetChildren()
-            for _, item in pairs(items) do
-                if item:IsA("BasePart") then
-                    local name = item.Name:lower()
-                    if name:find("item") or name:find("coin") or name:find("pick") or name:find("loot") then
-                        local dist = (item.Position - RootPart.Position).Magnitude
-                        if dist < 15 then -- Aumentei a distância de detecção
-                            -- Simula toque rápido
-                            item.Touched:Once(function()
-                                -- Ação executada ao tocar
-                            end)
-                            -- Move o personagem levemente em direção ao item se estiver longe
-                            if dist > 5 then
-                                local dir = (item.Position - RootPart.Position).Unit
-                                RootPart.Velocity = Vector3.new(dir.X * 20, RootPart.Velocity.Y, dir.Z * 20)
-                            end
-                        end
+local function setNoclip(ativo)
+    noclip = ativo
+    if ativo then
+        local conn = RunService.Stepped:Connect(function()
+            if not noclip then return end
+            local char = player.Character
+            if char then
+                for _, parte in ipairs(char:GetDescendants()) do
+                    if parte:IsA("BasePart") then
+                        parte.CanCollide = false
                     end
                 end
             end
-        end
+        end)
+        table.insert(connections, conn)
     end
 end
 
--- ==========================================
--- 5. INTERFACE MOBILE (DRAGGABLE UI)
--- ==========================================
-local ScreenGui = Instance.new("ScreenGui")
-ScreenGui.Name = "KronosHubUI"
-ScreenGui.ResetOnSpawn = false
-ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
-
-local Frame = Instance.new("Frame")
-Frame.Name = "MainFrame"
-Frame.Size = UDim2.new(0, 220, 0, 140) -- Reduzido levemente para mobile
-Frame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
-Frame.BackgroundTransparency = 0.1
-Frame.BorderSizePixel = 0
-Frame.Parent = ScreenGui
-
-local Header = Instance.new("Frame")
-Header.Name = "Header"
-Header.Size = UDim2.new(1, 0, 0, 25) -- Menor altura
-Header.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
-Header.Parent = Frame
-
-local Title = Instance.new("TextLabel")
-Title.Name = "Title"
-Title.Size = UDim2.new(1, -35, 1, 0)
-Title.BackgroundTransparency = 1
-Title.Text = "Kronos Hub v2"
-Title.TextColor3 = Color3.fromRGB(255, 255, 255)
-Title.Font = Enum.Font.GothamBold
-Title.TextSize = 12
-Title.Parent = Header
-
-local MinBtn = Instance.new("TextButton")
-MinBtn.Name = "MinBtn"
-MinBtn.Size = UDim2.new(0, 25, 1, 0)
-MinBtn.Position = UDim2.new(1, -25, 0, 0)
-MinBtn.BackgroundTransparency = 1
-MinBtn.Text = "-"
-MinBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-MinBtn.Parent = Header
-
-local Content = Instance.new("ScrollingFrame")
-Content.Name = "Content"
-Content.Size = UDim2.new(1, 0, 1, -25)
-Content.BackgroundTransparency = 1
-Content.ScrollBarThickness = 2
-Content.Parent = Frame
-
-local function createToggle(text, settingKey)
+local function criarToggle(nome, ordem, callback)
     local btn = Instance.new("TextButton")
-    btn.Size = UDim2.new(1, -10, 0, 25)
-    btn.Position = UDim2.new(0, 5, 0, 0)
-    btn.BackgroundTransparency = 0.5
-    btn.BackgroundColor3 = Color3.fromRGB(70, 70, 70)
-    btn.Text = text .. ": " .. tostring(Settings[settingKey])
+    btn.Size = UDim2.new(1, 0, 0, 38)
+    btn.BackgroundColor3 = Color3.fromRGB(45, 45, 60)
+    btn.Text = "  " .. nome .. "  [ OFF ]"
     btn.TextColor3 = Color3.fromRGB(255, 255, 255)
-    btn.Font = Enum.Font.GothamSemibold
-    btn.TextSize = 11
+    btn.Font = Enum.Font.GothamMedium
+    btn.TextSize = 14
+    btn.TextXAlignment = Enum.TextXAlignment.Left
+    btn.AutoButtonColor = false
+    btn.LayoutOrder = ordem
     btn.Parent = Content
-    
+
+    local c = Instance.new("UICorner")
+    c.CornerRadius = UDim.new(0, 8)
+    c.Parent = btn
+
+    local s = Instance.new("UIStroke")
+    s.Color = Color3.fromRGB(70, 70, 90)
+    s.Thickness = 1
+    s.Parent = btn
+
+    local estado = false
     btn.MouseButton1Click:Connect(function()
-        Settings[settingKey] = not Settings[settingKey]
-        btn.Text = text .. ": " .. tostring(Settings[settingKey])
-        
-        if settingKey == "SpeedHack" then
-            Humanoid.WalkSpeed = Settings.SpeedHack and Settings.SpeedValue or 16
+        estado = not estado
+        if estado then
+            btn.BackgroundColor3 = Color3.fromRGB(90, 60, 180)
+            s.Color = Color3.fromRGB(140, 80, 255)
+            btn.Text = "  " .. nome .. "  [ ON ]"
+        else
+            btn.BackgroundColor3 = Color3.fromRGB(45, 45, 60)
+            s.Color = Color3.fromRGB(70, 70, 90)
+            btn.Text = "  " .. nome .. "  [ OFF ]"
         end
+        callback(estado)
     end)
+    return btn
 end
 
-createToggle("God Mode", "GodMode")
-createToggle("Speed Hack", "SpeedHack")
-createToggle("Auto Jump", "AutoJump")
-createToggle("Auto Farm", "AutoFarm")
+criarToggle("🛡️ God Mode", 1, setGodMode)
+criarToggle("👻 Noclip", 2, setNoclip)
 
-local isMinimized = false
-MinBtn.MouseButton1Click:Connect(function()
-    isMinimized = not isMinimized
-    if isMinimized then
-        Content.Visible = false
-        Frame.Size = UDim2.new(0, 220, 0, 25)
-        Header.BackgroundColor3 = Color3.fromRGB(255, 0, 0)
-    else
-        Content.Visible = true
-        Frame.Size = UDim2.new(0, 220, 0, 140)
-        Header.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+-- Reiniciar estado ao respawnar
+player.CharacterAdded:Connect(function(char)
+    task.wait(0.5)
+    if godMode then
+        local hum = char:FindFirstChildOfClass("Humanoid")
+        if hum then hum.MaxHealth = math.huge; hum.Health = math.huge end
     end
 end)
 
--- Dragging Logic
+-- ========== 5. Arrastar (compatível com toque) ==========
 local dragging = false
-local dragStart = nil
-local startPos = nil
+local dragStart, startPos
 
-Header.InputBegan:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.Touch or input.UserInputType == Enum.UserInputType.MouseButton1 then
+TopBar.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1
+        or input.UserInputType == Enum.UserInputType.Touch then
         dragging = true
         dragStart = input.Position
-        startPos = Frame.Position
-    end
-end)
-
-Header.InputChanged:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.Touch or input.UserInputType == Enum.UserInputType.MouseMovement then
-        if dragging then
-            local delta = input.Position - dragStart
-            Frame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
-        end
-    end
-end)
-
-Header.InputEnded:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.Touch or input.UserInputType == Enum.UserInputType.MouseButton1 then
-        dragging = false
-    end
-end)
-
-Frame.Parent = ScreenGui
-ScreenGui.Parent = Players.LocalPlayer:WaitForChild("PlayerGui")
-
-print("[Kronos Hub] Script Carregado com Sucesso!")
-print("[Kronos Hub] Use o botão '-' para minimizar.")
-
--- Inicializa funções
-setupGodMode()
-setupMovement()
-setupAutoFarm()-- ==========================================
--- 6. CONEXÃO DO MENU COM O CÓDIGO (O QUE ESTAVA FALTANDO)
--- ==========================================
-
--- Conecta o God Mode ao loop de renderização
-RunService.RenderStepped:Connect(function()
-    if Settings.GodMode then
-        -- Garante que a vida nunca caia abaixo de um certo limite
-        if Humanoid.Health < Humanoid.MaxHealth and Humanoid.Health > 0 then
-            Humanoid.Health = Humanoid.MaxHealth
-        end
-    end
-    
-    -- Aplica a velocidade baseada na configuração do menu
-    if Settings.SpeedHack then
-        Humanoid.WalkSpeed = Settings.SpeedValue
-    else
-        Humanoid.WalkSpeed = 16 -- Velocidade padrão
-    end
-end)
-
--- Listener para quando o personagem respawnar (Morte/Reinício)
-LocalPlayer.CharacterAdded:Connect(function(newChar)
-    print("[Kronos] Personagem reiniciado. Recarregando módulos...")
-    
-    -- Aguarda os componentes carregarem
-    local newHumanoid = newChar:WaitForChild("Humanoid")
-    local newRootPart = newChar:WaitForChild("HumanoidRootPart")
-    
-    -- Atualiza as variáveis globais
-    Humanoid = newHumanoid
-    RootPart = newRootPart
-    
-    -- Reinicia o Auto Farm para o novo corpo
-    setupAutoFarm()
-    print("[Kronos] Módulos restaurados com sucesso.")
-end)
-
--- Botão de Reset para forçar recarga se der bug
-local ResetBtn = Instance.new("TextButton")
-ResetBtn.Name = "ResetBtn"
-ResetBtn.Size = UDim2.new(1, -10, 0, 25)
-ResetBtn.Position = UDim2.new(0, 5, 0, 0)
-ResetBtn.BackgroundColor3 = Color3.fromRGB(80, 20, 20)
-ResetBtn.Text = "REINICIAR HACK"
-ResetBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-ResetBtn.Font = Enum.Font.GothamBold
-ResetBtn.Parent = Content
-
-ResetBtn.MouseButton1Click:Connect(function()
-    -- Reseta tudo
-    for key, value in pairs(Settings) do
-        Settings[key] = false
-    end
-    Settings.GodMode = true
-    Settings.AutoJump = true
-    
-    -- Força reload do script
-    game:GetService("StarterGui"):SetCore("SendNotification", {
-        Title = "Kronos Hub";
-        Text = "Hacks Reiniciados!";
-        Duration = 3;
-    })
-    
-    -- Atualiza UI
-    for _, child in ipairs(Content:GetChildren()) do
-        if child:IsA("TextButton") and child ~= ResetBtn then
-            local settingName = child.Text:match(": (.*)$")
-            if settingName then
-                child.Text = child.Text:gsub(": .*$(), tostring(Settings[settingName]))
+        startPos = Main.Position
+        input.Changed:Connect(function()
+            if input.UserInputState == Enum.UserInputState.End then
+                dragging = false
             end
-        end
+        end)
     end
 end)
 
--- ==========================================
--- 7. FECHAMENTO CORRETO DA TELA E INICIALIZAÇÃO
--- ==========================================
+UserInputService.InputChanged:Connect(function(input)
+    if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement
+        or input.UserInputType == Enum.UserInputType.Touch) then
+        local delta = input.Position - dragStart
+        Main.Position = UDim2.new(
+            startPos.X.Scale, startPos.X.Offset + delta.X,
+            startPos.Y.Scale, startPos.Y.Offset + delta.Y
+        )
+    end
+end)
 
--- Ajuste final da UI para mobile (focar em telas pequenas)
-if UserInputService.TouchEnabled then
-    Frame.Size = UDim2.new(0, 180, 0, 120) -- Menor para celular
-    Content.Size = UDim2.new(1, 0, 1, -25)
-end
+-- ========== 6. Minimizar / Fechar ==========
+local minimizado = false
+local tamanhoOriginal = Main.Size
 
-ScreenGui.Parent = Players.LocalPlayer.PlayerGui
+MinimizeBtn.MouseButton1Click:Connect(function()
+    minimizado = not minimizado
+    if minimizado then
+        TweenService:Create(Main, TweenInfo.new(0.25), { Size = UDim2.new(0, 320, 0, 40) }):Play()
+        Content.Visible = false
+        MinimizeBtn.Text = "+"
+    else
+        TweenService:Create(Main, TweenInfo.new(0.25), { Size = tamanhoOriginal }):Play()
+        Content.Visible = true
+        MinimizeBtn.Text = "–"
+    end
+end)
 
--- Inicia os loops principais
-setupGodMode()
-setupMovement()
-setupAutoFarm()
+CloseBtn.MouseButton1Click:Connect(function()
+    for _, c in ipairs(connections) do pcall(function() c:Disconnect() end) end
+    noclip = false
+    godMode = false
+    ScreenGui:Destroy()
+end)
 
-print("[Kronos Hub] SCRIPT COMPLETO E EXECUTANDO!")
+print("⚔️ Kronos Hub (Delta Fixed) carregado!")
